@@ -1,0 +1,7 @@
+Host github.com
+  User git
+  Port 22
+  HostName github.com
+  IdentityFile ~/.ssh/deploy_rsa
+  TCPKeepAlive yes
+  IdentitiesOnly yes

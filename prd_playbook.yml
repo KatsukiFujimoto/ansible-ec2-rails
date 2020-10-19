@@ -1,0 +1,24 @@
+---
+- name: provision a server
+  hosts: all # set all the hosts defined in inventory as target server
+  become: true # run tasks with root privileges
+  gather_facts: False # don't gather facts about remote hosts
+
+  vars_files:
+  - vars/main.yml
+  - vars/nginx.yml
+  - vars/production.yml
+  - vars/private.yml.vault
+
+  pre_tasks:
+  - name: Update Apt
+    apt:
+      update_cache: yes
+
+
+  roles: # with a tag to execute single role when necessary
+  - { role: galaxy/geerlingguy.nodejs }
+  - { role: galaxy/geerlingguy.nginx, tags: "nginx"}
+  - { role: galaxy/zzet.rbenv }
+  - { role: custom/server, tags: "server" }
+  - { role: custom/apps, tags: "apps" }

@@ -1,0 +1,65 @@
+---
+- name: clone apps
+  become: yes
+  become_user: "{{ user_name }}"
+  git:
+    repo: git@github.com:Ryktwenties/rails_app_fuji.git
+    dest: /apps/rails_app_fuji
+    accept_hostkey: yes
+  ignore_errors: yes
+
+- name: Put master key
+  copy:
+    content: "{{ rails_app_fuji.master_key }}"
+    dest: "/apps/rails_app_fuji/config/master.key"
+    owner: "{{ user_name }}"
+    group: "{{ user_group }}"
+    mode: '0644'
+
+# - name: Put production key
+#   copy:
+#     content: "{{ rails_app_fuji.production_key }}"
+#     dest: "/apps/rails_app_fuji/config/credentials/production.key"
+#     owner: "{{ user_name }}"
+#     group: "{{ user_group }}"
+#     mode: '0644'
+
+- name: bundle install
+  shell: "{{ rbenv_shims }}/bundle install --without development test chdir=/apps/rails_app_fuji"
+  become: true
+  become_user: "{{ user_name }}"
+
+- name: Precompile assets
+  shell: "{{ rbenv_shims }}/bundle exec rake assets:precompile RAILS_ENV={{ env }} chdir=/apps/rails_app_fuji"
+  become: true
+  become_user: "{{ user_name }}"
+
+- name: Setup the Database
+  shell: "{{ rbenv_shims }}/rails db:create RAILS_ENV={{ env }} chdir=/apps/rails_app_fuji"
+  become: true
+  become_user: "{{ user_name }}"
+  environment:
+    DATABASE_HOST: "{{ rails_app_fuji.database.host }}"
+    DATABASE_USERNAME: "{{ rails_app_fuji.database.username }}"
+    DATABASE_PASSWORD: "{{ rails_app_fuji.database.password }}"
+
+- name: Migrate the Database
+  shell: "{{ rbenv_shims }}/rails db:migrate RAILS_ENV={{ env }} chdir=/apps/rails_app_fuji"
+  become: true
+  become_user: "{{ user_name }}"
+  environment:
+    DATABASE_HOST: "{{ rails_app_fuji.database.host }}"
+    DATABASE_USERNAME: "{{ rails_app_fuji.database.username }}"
+    DATABASE_PASSWORD: "{{ rails_app_fuji.database.password }}"
+
+- name: Start the application server
+  shell: "RAILS_ENV={{ env }} RAILS_SERVE_STATIC_FILES=true {{ rbenv_shims }}/bundle exec pumactl start chdir=/apps/rails_app_fuji"
+  become: true
+  become_user: "{{ user_name }}"
+  environment:
+    DATABASE_HOST: "{{ rails_app_fuji.database.host }}"
+    DATABASE_USERNAME: "{{ rails_app_fuji.database.username }}"
+    DATABASE_PASSWORD: "{{ rails_app_fuji.database.password }}"
+
+# - name: Restart the web server # to reconnect to the socket only for the first execution
+#   shell: "systemctl restart nginx"

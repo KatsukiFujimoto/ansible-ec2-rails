@@ -1,0 +1,71 @@
+nginx_worker_processes: auto
+nginx_worker_connections: 10240
+nginx_multi_accept: "on"
+nginx_client_max_body_size: 500M
+
+nginx_extra_conf_options: |
+  worker_rlimit_nofile 30720;
+nginx_tcp_nopush: "on"
+nginx_server_tokens: "off"
+
+nginx_extra_http_options: |
+  types_hash_max_size 2048;
+  log_format ltsv 'time:$time_local\t'
+                  'server:$server_name\t'
+                  'remote_addr:$remote_addr\t'
+                  'x_forwarded_for:$http_x_forwarded_for\t'
+                  'time_local:$msec\t'
+                  'request_uri:$request_uri\t'
+                  'request:$request\t'
+                  'body_bytes_sent:$body_bytes_sent\t'
+                  'status:$status\t'
+                  'referer:$http_referer\t'
+                  'user_agent:$http_user_agent';
+  gzip                      on;
+  gzip_static               on;
+  proxy_read_timeout        120;
+  proxy_send_timeout        120;
+  proxy_connect_timeout     120;
+  proxy_intercept_errors    on;
+  proxy_set_header          Host $http_host;
+  proxy_set_header          X-Scheme $scheme;
+  proxy_set_header          X-Real-IP $remote_addr;
+  proxy_set_header          X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header          X-Forwarded-Proto $scheme;
+nginx_upstreams:
+  - name: app_backend
+    keepalive: 64
+    servers: {
+      "unix:/apps/rails_app_fuji/tmp/sockets/puma.sock"
+    }
+
+nginx_remove_default_vhost: true
+
+nginx_vhosts:
+  #- listen: "443 ssl"
+  - listen: "80; listen [::]:80"
+    server_name: "{{ app_domain }}"
+    root: "/apps/rails_app_fuji/public"
+    access_log: "/var/log/nginx/rails_app_fuji.log  ltsv"
+    error_log:  "/var/log/nginx/rails_app_fuji-error.log"
+    extra_parameters: |
+        location /health_check {
+          access_log off;
+          proxy_set_header Host {{ app_domain }};
+          proxy_pass http://app_backend;
+        }
+        location / {
+            if (-f $request_filename) {
+              break;
+            }
+
+            proxy_set_header Host {{ app_domain }};
+            proxy_set_header X-Forwarded-Proto https;
+            proxy_pass http://app_backend;
+        }
+        location ~* \.(pdf|ico|css|js|gif|jpe?g|png|ttf|eot|svg|woff|test)(\?[0-9]+)?$ {
+            access_log off;
+            expires 1d;
+        }
+    # set https cuz alb redirect http to https
+    # proxy_set_header X-Forwarded-Proto $scheme;

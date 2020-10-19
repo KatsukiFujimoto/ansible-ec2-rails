@@ -1,0 +1,40 @@
+---
+- name: Install dependency libraries.
+  apt: name={{item}} state=present update_cache=yes
+  with_items:
+  - unzip
+  - libpq-dev
+  - nodejs
+  - python-dev
+  - libpq-dev
+  - vim
+  - tzdata
+
+- name: Put deploy ssh key
+  copy:
+    content: "{{ deploy_key }}"
+    dest: "/home/{{ user_name }}/.ssh/deploy_rsa"
+    mode: 0600
+    owner: "{{ user_name }}"
+    group: "{{ user_group }}"
+
+- name: Put ssh/config
+  copy:
+    src: "{{ playbook_dir }}/files/ssh_config"
+    dest: "/home/{{ user_name }}/.ssh/config"
+    owner: "{{ user_name }}"
+    group: "{{ user_group }}"
+    mode: 0600
+
+- name: Create a directory to use application.
+  file:
+    path: /apps
+    owner: "{{ user_name }}"
+    group: "{{ user_group }}"
+    state: directory
+    mode: 0755
+
+- name: Install yarn
+  npm:
+    name: yarn
+    global: yes

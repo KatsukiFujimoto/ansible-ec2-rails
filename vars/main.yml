@@ -1,0 +1,21 @@
+ansible_distribution: "Ubuntu"
+ansible_os_family: "Debian"
+ansible_distribution_major_version: "20"
+ansible_distribution_release: "focal"
+ansible_architecture: "x86_64"
+ansible_pkg_mgr: "apt"
+
+user_name: "ubuntu"
+user_group: "ubuntu"
+
+rbenv_shims: "/home/{{ user_name }}/.rbenv/shims"
+
+rbenv:
+  env: user
+  version: v1.0.0
+  default_ruby: 2.6.2
+  rubies:
+    - version: 2.6.2
+
+rbenv_users:
+  - "{{ user_name }}"

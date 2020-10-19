@@ -1,0 +1,5 @@
+# Ignore galaxy roles
+/roles/galaxy/*
+
+# Ignore ansible vault key
+vault.txt
